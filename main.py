@@ -86,7 +86,7 @@ def home():
     return render_template('home.html', suggestions=suggestions)
 
 @app.route("/similarity",methods=["POST"])
-def similarity():
+def get_similarity():
     if data is None or similarity is None:
         return "Error: Movie data not loaded properly."
     movie = request.form['name']
