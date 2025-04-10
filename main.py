@@ -9,12 +9,12 @@ import pickle
 import requests
 import os
 
-app = Flask(__name__)
+app = Flask(__name__, template_folder='.')  # point to current directory for templates
 
 # Load ML model and vectorizer
 try:
     clf = pickle.load(open('nlp_model.pkl', 'rb'))
-    vectorizer = pickle.load(open('transform.pkl','rb'))  # fixed typo: tranform -> transform
+    vectorizer = pickle.load(open('transform.pkl','rb'))
 except Exception as e:
     raise Exception("Model loading failed. Ensure 'nlp_model.pkl' and 'transform.pkl' are present.", e)
 
@@ -60,8 +60,6 @@ def home():
     suggestions = get_suggestions()
     return render_template("index.html", suggestions=suggestions)
 
-# Run Flask app on correct port for Render
-    if __name__ == '__main__':
+if __name__ == '__main__':
     app.run(host='0.0.0.0', port=3000)
 
-    
