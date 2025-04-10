@@ -8,12 +8,21 @@ import bs4 as bs
 import urllib.request
 import pickle
 import requests
-import os
+import os  # Import the os module
 
 # load the nlp model and tfidf vectorizer from disk
 filename = 'nlp_model.pkl'
-clf = pickle.load(open(filename, 'rb'))
-vectorizer = pickle.load(open('transform.pkl','rb'))
+try:
+    clf = pickle.load(open(filename, 'rb'))
+except FileNotFoundError:
+    print(f"Error: {filename} not found. Make sure it's in the correct directory.")
+    clf = None  # Handle the case where the file is not found
+
+try:
+    vectorizer = pickle.load(open('transform.pkl','rb'))
+except FileNotFoundError:
+    print("Error: transform.pkl not found. Make sure it's in the correct directory.")
+    vectorizer = None # Handle the case where the file is not found
 
 def create_similarity():
     data = pd.read_csv('main_data.csv')
@@ -24,13 +33,18 @@ def create_similarity():
     similarity = cosine_similarity(count_matrix)
     return data,similarity
 
+# Initialize data and similarity outside the function scope
+data = None
+similarity = None
+
 def rcmd(m):
+    global data, similarity
     m = m.lower()
     try:
-        data.head()
-        similarity.shape
-    except:
-        data, similarity = create_similarity()
+        if data is None or similarity is None:
+            data, similarity = create_similarity()
+    except FileNotFoundError:
+        return "Error: main_data.csv not found. Please ensure it's in the correct directory."
     if m not in data['movie_title'].unique():
         return('Sorry! try another movie name')
     else:
@@ -43,33 +57,38 @@ def rcmd(m):
             a = lst[i][0]
             l.append(data['movie_title'][a])
         return l
-    
+
 # converting list of string to list (eg. "["abc","def"]" to ["abc","def"])
-
 def convert_to_list(my_list):
-    my_list = my_list.split('","')
-    my_list[0] = my_list[0].replace('["','')
-    my_list[-1] = my_list[-1].replace('"]','')
-    return my_list
-
+    if isinstance(my_list, str):
+        my_list = my_list.split('","')
+        my_list[0] = my_list[0].replace('["','')
+        my_list[-1] = my_list[-1].replace('"]','')
+        return my_list
+    return []
 
 # to get suggestions of movies
 def get_suggestions():
-    data = pd.read_csv('main_data.csv')
-    return list(data['movie_title'].str.capitalize())
+    try:
+        data = pd.read_csv('main_data.csv')
+        return list(data['movie_title'].str.capitalize())
+    except FileNotFoundError:
+        print("Error: main_data.csv not found.")
+        return []
 
 # Flask API
-
 app = Flask(__name__)
 
 @app.route("/")
 @app.route("/home")
 def home():
     suggestions = get_suggestions()
-    return render_template('home.html',suggestions=suggestions)
+    return render_template('home.html', suggestions=suggestions)
 
 @app.route("/similarity",methods=["POST"])
 def similarity():
+    if data is None or similarity is None:
+        return "Error: Movie data not loaded properly."
     movie = request.form['name']
     rc = rcmd(movie)
     if type(rc)==type('string'):
@@ -113,16 +132,16 @@ def recommend():
     cast_bdays = convert_to_list(cast_bdays)
     cast_bios = convert_to_list(cast_bios)
     cast_places = convert_to_list(cast_places)
-    
+
     # convert string to list (eg. "[1,2,3]" to [1,2,3])
     cast_ids = cast_ids.split(',')
     cast_ids[0] = cast_ids[0].replace("[","")
     cast_ids[-1] = cast_ids[-1].replace("]","")
-    
+
     # rendering the string to python string
     for i in range(len(cast_bios)):
         cast_bios[i] = cast_bios[i].replace(r'\n', '\n').replace(r'\"','\"')
-    
+
     # combining multiple lists as a dictionary which can be passed to the html file so that it can be processed easily and the order of information will be preserved
     movie_cards = {rec_posters[i]: rec_movies[i] for i in range(len(rec_posters))}
 
@@ -130,32 +149,42 @@ def recommend():
 
     cast_details = {cast_names[i]:[cast_ids[i], cast_profiles[i], cast_bdays[i], cast_places[i], cast_bios[i]] for i in range(len(cast_places))}
 
-    # web scraping to get user reviews from IMDB site
-    sauce = urllib.request.urlopen('https://www.imdb.com/title/{}/reviews?ref_=tt_ov_rt'.format(imdb_id)).read()
-    soup = bs.BeautifulSoup(sauce,'lxml')
-    soup_result = soup.find_all("div",{"class":"text show-more__control"})
+    movie_reviews = {}
+    try:
+        # web scraping to get user reviews from IMDB site
+        sauce = urllib.request.urlopen('https://www.imdb.com/title/{}/reviews?ref_=tt_ov_rt'.format(imdb_id)).read()
+        soup = bs.BeautifulSoup(sauce,'lxml')
+        soup_result = soup.find_all("div",{"class":"text show-more__control"})
 
-    reviews_list = [] # list of reviews
-    reviews_status = [] # list of comments (good or bad)
-    for reviews in soup_result:
-        if reviews.string:
-            reviews_list.append(reviews.string)
-            # passing the review to our model
-            movie_review_list = np.array([reviews.string])
-            movie_vector = vectorizer.transform(movie_review_list)
-            pred = clf.predict(movie_vector)
-            reviews_status.append('Good' if pred else 'Bad')
+        reviews_list = [] # list of reviews
+        reviews_status = [] # list of comments (good or bad)
+        if clf is not None and vectorizer is not None:
+            for reviews in soup_result:
+                if reviews.string:
+                    reviews_list.append(reviews.string)
+                    # passing the review to our model
+                    movie_review_list = np.array([reviews.string])
+                    movie_vector = vectorizer.transform(movie_review_list)
+                    pred = clf.predict(movie_vector)
+                    reviews_status.append('Good' if pred else 'Bad')
 
-    # combining reviews and comments into a dictionary
-    movie_reviews = {reviews_list[i]: reviews_status[i] for i in range(len(reviews_list))}     
+            # combining reviews and comments into a dictionary
+            movie_reviews = {reviews_list[i]: reviews_status[i] for i in range(len(reviews_list))}
+        else:
+            print("Warning: NLP model or vectorizer not loaded. Skipping review analysis.")
+    except urllib.error.URLError as e:
+        print(f"Error accessing IMDB: {e}")
+    except Exception as e:
+        print(f"An error occurred during web scraping: {e}")
 
     # passing all the data to the html file
     return render_template('recommend.html',title=title,poster=poster,overview=overview,vote_average=vote_average,
-        vote_count=vote_count,release_date=release_date,runtime=runtime,status=status,genres=genres,
-        movie_cards=movie_cards,reviews=movie_reviews,casts=casts,cast_details=cast_details)
+                           vote_count=vote_count,release_date=release_date,runtime=runtime,status=status,genres=genres,
+                           movie_cards=movie_cards,reviews=movie_reviews,casts=casts,cast_details=cast_details,
+                           suggestions=suggestions) # Pass suggestions here
 
 if __name__ == '__main__':
-    port = int(os.environ.get("PORT", 10000))
-    app.run(host='0.0.0.0', port=port)
+    port = int(os.environ.get("PORT", 5000)) # Default to 5000 if PORT not set
+    app.run(host='0.0.0.0', port=port, debug=True) # Enable debug mode for development
 
 
