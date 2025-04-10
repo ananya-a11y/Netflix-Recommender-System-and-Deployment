@@ -54,9 +54,9 @@ def get_suggestions():
     data = pd.read_csv('main_data.csv')
     return list(data['movie_title'].str.capitalize())
 
-@app.route("/")
-@app.route("/home")
+
 @app.route('/')
+@app.route('/home')
 def home():
     return render_template("index.html")
 
