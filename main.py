@@ -196,5 +196,18 @@ def debug_files():
     if os.path.exists(templates_dir):
         templates_files = os.listdir(templates_dir)
     return f"Current Directory: {current_dir}<br>Files in Current Directory: {current_files}<br>Templates Directory: {templates_dir}<br>Files in Templates Directory: {templates_files}"
+from flask import Flask, render_template, request, jsonify # Import jsonify
 
+# ... (your other imports and code)
+
+@app.route("/similarity",methods=["POST"])
+def similarity():
+    if data is None or similarity is None:
+        return jsonify({'error': "Movie data not loaded properly."}) # Return JSON error
+    movie = request.form['name']
+    rc = rcmd(movie)
+    if type(rc)==type('string'):
+        return rc # Keep the string return for the "Sorry!" message
+    else:
+        return jsonify({'recommendations': rc}) # Return recommendations as JSON
 
