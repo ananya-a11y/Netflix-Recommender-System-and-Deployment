@@ -185,5 +185,16 @@ def recommend():
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 10000))
     app.run(host='0.0.0.0', port=port)
+    import os
+
+@app.route("/debug_files")
+def debug_files():
+    current_dir = os.getcwd()
+    templates_dir = os.path.join(current_dir, 'templates')
+    current_files = os.listdir(current_dir)
+    templates_files = []
+    if os.path.exists(templates_dir):
+        templates_files = os.listdir(templates_dir)
+    return f"Current Directory: {current_dir}<br>Files in Current Directory: {current_files}<br>Templates Directory: {templates_dir}<br>Files in Templates Directory: {templates_files}"
 
 
