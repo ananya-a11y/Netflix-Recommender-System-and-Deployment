@@ -8,7 +8,6 @@ import urllib.request
 import pickle
 import requests
 
-from flask import Flask
 app = Flask(__name__)
 
 
@@ -59,4 +58,4 @@ def get_suggestions():
 @app.route("/home")
 def home():
     suggestions = get_suggestions()
-    app.run(debug=True)
+        return render_template("index.html", suggestions=suggestions)
