@@ -13,14 +13,31 @@
                 var movieName = $('#search_input').val();
 
                 $.ajax({
-                    url: "{{ url_for('get_similarity') }}",  // 🔁 updated here
+                    url: "{{ url_for('get_similarity') }}",  
                     type: "POST",
                     data: { 'name': movieName },
                     success: function(response) {
-                        $('.popular_container').empty(); // Clear previous results
-                        if (typeof response === 'string' && response.startsWith("Sorry!")) {
-                            $('.popular_container').append('<p>' + response + '</p>');
-                        } else if (typeof response === 'object' && response.recommendations) {
-                            var recommendations = response.recommendations;
-                            if (recommendations.length > 0) {
-                                var recommendationsHTML = '<h3>Recommendations:</
+    $('.popular_container').empty(); // Clear previous results
+    if (typeof response === 'string' && response.startsWith("Sorry!")) {
+        $('.popular_container').append('<p>' + response + '</p>');
+    } else if (typeof response === 'object' && response.recommendations) {
+        var recommendations = response.recommendations;
+        if (recommendations.length > 0) {
+            var recommendationsHTML = '<h3>Recommendations:</h3><ul>';
+            for (var i = 0; i < recommendations.length; i++) {
+                recommendationsHTML += '<li>' + recommendations[i] + '</li>';
+            }
+            recommendationsHTML += '</ul>';
+            $('.popular_container').append(recommendationsHTML);
+        } else {
+            $('.popular_container').append('<p>No recommendations found.</p>');
+        }
+    } else {
+        $('.popular_container').append('<p>Error fetching recommendations.</p>');
+    }
+},
+error: function(xhr, status, error) {
+    console.error("Error fetching recommendations:", error);
+    $('.popular_container').append('<p>Error fetching recommendations.</p>');
+}
+
