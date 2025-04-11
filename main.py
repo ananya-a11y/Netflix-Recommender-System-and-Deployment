@@ -41,8 +41,8 @@ def rcmd(movie):
     lst = sorted(lst, key=lambda x: x[1], reverse=True)[1:11]
     return [data['movie_title'][i[0]] for i in lst]
 
-@app.route('/')
-@app.route('/home')
+@app.route('/', methods=['GET', 'HEAD'])
+@app.route('/home', methods=['GET', 'HEAD'])
 def home():
     return render_template('home.html')
 
