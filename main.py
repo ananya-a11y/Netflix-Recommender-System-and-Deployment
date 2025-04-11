@@ -42,9 +42,11 @@ def rcmd(movie):
 @app.route('/home', methods=['GET', 'HEAD'])
 def home():
     try:
-        return render_template('home.html')
+        suggestions = get_suggestions()
+        return render_template('home.html', suggestions=suggestions)
     except Exception as e:
         return f"Error rendering home.html: {e}", 500
+
 
 @app.route("/similarity", methods=["POST"])
 def get_similarity():
