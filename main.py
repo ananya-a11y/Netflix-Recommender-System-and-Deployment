@@ -3,10 +3,7 @@ import pandas as pd
 from flask import Flask, render_template, request, jsonify
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
-import bs4 as bs
-import urllib.request
 import pickle
-import requests
 import os
 
 app = Flask(__name__, template_folder='.')
@@ -44,7 +41,10 @@ def rcmd(movie):
 @app.route('/', methods=['GET', 'HEAD'])
 @app.route('/home', methods=['GET', 'HEAD'])
 def home():
-    return render_template('home.html')
+    try:
+        return render_template('home.html')
+    except Exception as e:
+        return f"Error rendering home.html: {e}", 500
 
 @app.route("/similarity", methods=["POST"])
 def get_similarity():
