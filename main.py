@@ -38,6 +38,13 @@ def rcmd(movie):
     lst = sorted(lst, key=lambda x: x[1], reverse=True)[1:11]
     return [data['movie_title'][i[0]] for i in lst]
 
+def get_suggestions():
+    try:
+        data = pd.read_csv('main_data.csv')
+        return list(data['movie_title'].str.capitalize())
+    except:
+        return []
+
 @app.route('/', methods=['GET', 'HEAD'])
 @app.route('/home', methods=['GET', 'HEAD'])
 def home():
