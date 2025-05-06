@@ -1,0 +1,12 @@
+import pandas as pd
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics.pairwise import cosine_similarity
+import pickle
+
+df = pd.read_csv('final_df.csv')
+tfidf = TfidfVectorizer(stop_words='english')
+tfidf_matrix = tfidf.fit_transform(df['tags'])
+similarity = cosine_similarity(tfidf_matrix)
+
+with open('similarity.pkl', 'wb') as f:
+    pickle.dump(similarity, f)
