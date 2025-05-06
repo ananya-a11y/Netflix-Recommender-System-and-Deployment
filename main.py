@@ -21,9 +21,7 @@ try:
     data = pd.read_csv('main_data.csv')
     cv = CountVectorizer()
     count_matrix = cv.fit_transform(data['comb'])
-import pickle
 similarity = pickle.load(open('similarity.pkl', 'rb'))
-
 except Exception as e:
     print(f"Error loading main_data.csv or computing similarity: {e}")
     data, similarity_matrix = None, None
