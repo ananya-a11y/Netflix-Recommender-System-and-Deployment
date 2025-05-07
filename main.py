@@ -5,7 +5,7 @@ from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 import pickle
 import os
-import streamlit as st
+
 
 app = Flask(__name__, template_folder='templates')
 
@@ -22,7 +22,8 @@ try:
     data = pd.read_csv('main_data.csv')
     cv = CountVectorizer()
     count_matrix = cv.fit_transform(data['comb'])
-    similarity = cosine_similarity(tfidf_matrix)
+    similarity = cosine_similarity(count_matrix)
+
 
 except Exception as e:
     print(f"Error loading main_data.csv or computing similarity: {e}")
