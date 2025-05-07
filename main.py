@@ -5,6 +5,7 @@ from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 import pickle
 import os
+import streamlit as st
 
 app = Flask(__name__, template_folder='templates')
 
