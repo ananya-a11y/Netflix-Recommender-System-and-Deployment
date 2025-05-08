@@ -6,19 +6,14 @@ from sklearn.metrics.pairwise import cosine_similarity
 import pickle
 import os
 import logging
-from  scipy.sparse import csr_matrix
-
-# Set up logging
-logging.basicConfig(level=logging.ERROR)  # Configure logging to capture errors
 
 app = Flask(__name__, template_folder='templates')
 
-# Global variables for model and data (loaded on demand)
+# Global variables
 clf = None
 vectorizer = None
 data = None
-similarity = None
-suggestions_list = None # to store suggestions
+suggestions_list = None
 
 def load_model_and_vectorizer():
     """Loads the ML model and vectorizer."""
@@ -30,45 +25,63 @@ def load_model_and_vectorizer():
             logging.info("Model and vectorizer loaded successfully.")
         except Exception as e:
             logging.error(f"Error loading model or vectorizer: {e}")
-            raise  # Re-raise the exception to be caught by the caller
+            raise
 
-def load_data_and_compute_similarity():
-    """Loads the data and computes the cosine similarity matrix."""
-    global data, similarity, suggestions_list
-    if data is None or similarity is None:
+def load_data(reduce_data=False, num_samples=3000):
+    """Loads the movie data, with optional reduction."""
+    global data, suggestions_list
+    if data is None:
         try:
             data = pd.read_csv('main_data.csv')
-            cv = CountVectorizer()
-            count_matrix = cv.fit_transform(data['comb'])
-            similarity = cosine_similarity(count_matrix)
-            similarity = csr_matrix(similarity)  # store similarity matrix as sparse
-            suggestions_list = list(data['movie_title'].str.capitalize()) # pre-compute suggestions
-            logging.info("Data loaded and similarity matrix computed.")
+            if reduce_data:
+                if len(data) > num_samples:
+                    #Option 1: Random Sampling
+                    data = data.sample(n=num_samples, random_state=42)  # Consistent random sample
+                    logging.info(f"Data reduced to {num_samples} samples using random sampling.")
+
+                    #Option 2: Sampling based on popularity.
+                    # Assuming you have a 'popularity' column
+                    #data = data.sort_values(by='popularity', ascending=False).head(num_samples)
+                    #logging.info(f"Data reduced to {num_samples} most popular samples")
+
+                else:
+                    logging.warning(f"Data already <= {num_samples}, no reduction needed.")
+            suggestions_list = list(data['title'].str.capitalize())
+            logging.info("Data loaded successfully.")
         except Exception as e:
-            logging.error(f"Error loading data or computing similarity: {e}")
-            raise  # Re-raise the exception to be caught by the caller
+            logging.error(f"Error loading data: {e}")
+            raise
 
 def get_suggestions():
-    """Returns a list of movie titles.  Handles the case where data might be None."""
+    """Returns a list of movie titles."""
     global suggestions_list
     if suggestions_list is None:
-        load_data_and_compute_similarity() # load data if not loaded
+        load_data()
     return suggestions_list if suggestions_list is not None else []
 
 def rcmd(movie):
     """Recommends movies similar to the given movie."""
-    global data, similarity
-    if data is None or similarity is None:
-        load_data_and_compute_similarity() # load data if not loaded
-    if data is None or similarity is None:
-        return "Error: Data or similarity matrix is not available."
+    global data, vectorizer
+    if data is None:
+        load_data()
+    if vectorizer is None:
+        load_model_and_vectorizer()
+    if data is None or vectorizer is None:
+        return "Error: Data or model is not available."
 
     movie = movie.lower()
-    if movie not in data['movie_title'].str.lower().values:
+    if movie not in data['title'].str.lower().values:
         return 'Sorry! Try another movie name.'
-    i = data.loc[data['movie_title'].str.lower() == movie].index[0]
-    lst = sorted(list(enumerate(similarity[i].toarray()[0])), key=lambda x: x[1], reverse=True)[1:11] # added .toarray()
-    return [data['movie_title'][i[0]] for i in lst]
+    try:
+        movie_index = data.loc[data['title'].str.lower() == movie].index[0]
+        movie_comb = data['comb'].iloc[movie_index]
+        movie_vector = vectorizer.transform([movie_comb])
+        similarity_scores = cosine_similarity(movie_vector, vectorizer.transform(data['comb']))[0]
+        similar_movies = sorted(list(enumerate(similarity_scores)), key=lambda x: x[1], reverse=True)[1:11]
+        return [data['title'][i[0]] for i in similar_movies]
+    except Exception as e:
+        logging.error(f"Error calculating similarity: {e}")
+        return "Error calculating movie recommendations."
 
 @app.route('/', methods=['GET', 'HEAD'])
 @app.route('/home', methods=['GET', 'HEAD'])
@@ -90,7 +103,7 @@ def get_similarity():
     try:
         recs = rcmd(movie)
         if isinstance(recs, str):
-            return jsonify({"error": recs})  # Return the error message from rcmd
+            return jsonify({"error": recs})
         return jsonify({"recommendations": recs})
     except Exception as e:
         logging.error(f"Error in /similarity: {e}")
@@ -101,21 +114,22 @@ def recommend():
     """Renders the recommendation page with movie details."""
     try:
         details = {key: request.form[key] for key in request.form}
-        suggestions = get_suggestions() # loads data if not already loaded
-
-        for k in ['rec_movies', 'rec_posters', 'cast_names', 'cast_chars', 'cast_profiles', 'cast_bdays', 'cast_bios', 'cast_places']:
+        suggestions = get_suggestions()
+        for k in ['rec_movies', 'rec_posters', 'cast_names', 'cast_chars', 'cast_profiles', 'cast_bdays', 'cast_bios',
+                  'cast_places']:
             if k in details:
                 details[k] = details[k].split('","')
-                details[k][0] = details[k][0].replace('["', '')  # corrected this
-                details[k][-1] = details[k][-1].replace('"]', '') # corrected this
-
-        cast_ids = details['cast_ids'].strip('[]').split(',') # corrected this
-        movie_cards = {details['rec_posters'][i]: details['rec_movies'][i] for i in range(len(details['rec_movies']))}
-        casts = {details['cast_names'][i]: [cast_ids[i], details['cast_chars'][i], details['cast_profiles'][i]] for i in range(len(details['cast_names']))}
-        cast_details = {details['cast_names'][i]: [cast_ids[i], details['cast_profiles'][i], details['cast_bdays'][i], details['cast_places'][i], details['cast_bios'][i]] for i in range(len(details['cast_names']))}
+                details[k][0] = details[k][0].replace('["', '')
+                details[k][-1] = details[k][-1].replace('"]', '')
+        cast_ids = details['cast_ids'].strip('[]').split(',')
+        movie_cards = {details['rec_posters'][i]: details['rec_movies'][i] for i in
+                       range(len(details['rec_movies']))}
+        casts = {details['cast_names'][i]: [cast_ids[i], details['cast_chars'][i], details['cast_profiles'][i]] for i in
+                 range(len(details['cast_names']))}
+        cast_details = {details['cast_names'][i]: [cast_ids[i], details['cast_profiles'][i], details['cast_bdays'][i],
+                                                   details['cast_places'][i], details['cast_bios'][i]] for i in
+                       range(len(details['cast_names']))}
         movie_reviews = {}
-        # skipping IMDB scraping in this simplified version
-
         return render_template('recommend.html',
                                title=details['title'],
                                poster=details['poster'],
@@ -137,6 +151,9 @@ def recommend():
 
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 10000))
+    # Load data with reduction enabled.  You can change num_samples here.
+    load_data(reduce_data=True, num_samples=3000)
     app.run(host='0.0.0.0', port=port)
+
 
 
