@@ -14,5 +14,3 @@ requests
 pickleshare
 Jinja2
 streamlit
-pickle5
-
