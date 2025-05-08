@@ -106,21 +106,24 @@ def recommend():
         movie_reviews = {}
         # skipping IMDB scraping in this simplified version
 
-        return render_template('recommend.html',
-                               title=details['title'],
-                               poster=details['poster'],
-                               overview=details['overview'],
-                               vote_average=details['rating'],
-                               vote_count=details['vote_count'],
-                               release_date=details['release_date'],
-                               runtime=details['runtime'],
-                               status=details['status'],
-                               genres=details['genres'],
-                               movie_cards=movie_cards,
-                               reviews=movie_reviews,
-                               casts=casts,
-                               cast_details=cast_details,
-                               suggestions=suggestions)
+        movie_reviews = {}
+# skipping IMDB scraping in this simplified version
+return render_template('recommend.html',
+                       title=details['title'],
+                       poster=details['poster'],
+                       overview=details['overview'],
+                       vote_average=details['rating'],
+                       vote_count=details['vote_count'],
+                       release_date=details['release_date'],
+                       runtime=details['runtime'],
+                       status=details['status'],
+                       genres=details['genres'],
+                       movie_cards=movie_cards,
+                       reviews=movie_reviews,
+                       casts=casts,
+                       cast_details=cast_details,
+                       suggestions=suggestions) # No comma after the last argument
+
     except Exception as e:
         logging.error(f"Error in /recommend: {e}")
         return f"Error in /recommend: {e}", 500
