@@ -9,7 +9,7 @@ import numpy as np
 
 # Page config
 st.set_page_config(
-    page_title="Netflix Movie Recommender",
+    page_title="Movie Recommender System",
     page_icon="🎬",
     layout="wide"
 )
@@ -57,7 +57,7 @@ if 'similarity' not in st.session_state:
 if 'data_loaded' not in st.session_state:
     st.session_state['data_loaded'] = False
 
-# Function to fetch movie poster
+# Function to fetch movie poster - only if you have a movie ID that works with TMDB
 def fetch_poster(movie_id):
     try:
         url = f"https://api.themoviedb.org/3/movie/{movie_id}?api_key=b9bf452c3871ecb61c8761a66d155cc8&language=en-US"
@@ -67,7 +67,7 @@ def fetch_poster(movie_id):
             return "https://image.tmdb.org/t/p/w500/" + poster_path
         return None
     except Exception as e:
-        st.warning(f"Could not fetch poster: {e}")
+        # Just return None silently if poster fetch fails
         return None
 
 # Load data with proper error handling and caching
@@ -79,25 +79,9 @@ def load_movie_data():
             with open('optimized_movies.pkl', 'rb') as f:
                 return pickle.load(f)
         
-        # Otherwise, load and optimize the CSV data
-        movies = pd.read_csv('tmdb_5000_movies.csv')
-        credits = pd.read_csv('tmdb_5000_credits.csv')
-        
-        # Optimize memory usage by converting data types
-        for col in movies.select_dtypes(include=['object']).columns:
-            if col not in ['title', 'overview', 'tagline']:
-                movies[col] = movies[col].astype('category')
-        
-        movies = movies.merge(credits, on='title')
-        
-        # Keep only necessary columns
-        movies = movies[['movie_id', 'title', 'overview', 'genres', 'keywords', 'cast', 'crew']]
-        
-        # Save the optimized dataframe for future use
-        with open('optimized_movies.pkl', 'wb') as f:
-            pickle.dump(movies, f)
-            
-        return movies
+        # If optimized file doesn't exist, inform user
+        st.error("Movie data not found. Please run the precomputation script first.")
+        return None
     except Exception as e:
         st.error(f"Error loading movie data: {e}")
         return None
@@ -117,7 +101,7 @@ def get_similarity_matrix():
                 return pickle.load(f)
                 
         # If no similarity matrix exists, inform the user
-        st.warning("Similarity matrix not found. Please generate it first.")
+        st.error("Similarity matrix not found. Please run the precomputation script first.")
         return None
     except Exception as e:
         st.error(f"Error loading similarity matrix: {e}")
@@ -135,10 +119,20 @@ def recommend(movie_title, movies_df, similarity_matrix):
         
         recommended_movies = []
         for i in movie_list:
-            movie_id = movies_df.iloc[i[0]].movie_id
+            movie_id = movies_df.iloc[i[0]]['movie_id'] if 'movie_id' in movies_df.columns else i[0]
+            movie_title = movies_df.iloc[i[0]]['title']
+            
+            # Try to get poster if possible
+            poster = None
+            try:
+                if isinstance(movie_id, (int, float, str)) and str(movie_id).isdigit():
+                    poster = fetch_poster(int(movie_id))
+            except:
+                poster = None
+                
             recommended_movies.append({
-                'title': movies_df.iloc[i[0]].title,
-                'poster': fetch_poster(movie_id)
+                'title': movie_title,
+                'poster': poster
             })
         return recommended_movies
     except Exception as e:
@@ -147,7 +141,7 @@ def recommend(movie_title, movies_df, similarity_matrix):
 
 # Main function to run the Streamlit app
 def main():
-    st.markdown("<h1 class='main-header'>Netflix Movie Recommender System</h1>", unsafe_allow_html=True)
+    st.markdown("<h1 class='main-header'>Movie Recommender System</h1>", unsafe_allow_html=True)
     
     # Show a spinner while loading data
     with st.spinner("Loading movie data... This may take a moment."):
@@ -155,14 +149,15 @@ def main():
             # Load movie data
             movies_df = load_movie_data()
             if movies_df is None:
-                st.error("Failed to load movie data. Please check your dataset files.")
+                st.error("Failed to load movie data. Please check that you've run the precomputation script and uploaded the files.")
+                st.info("Make sure 'optimized_movies.pkl' and 'similarity.pbz2' files exist in your repository.")
                 st.stop()
             
             # Load similarity matrix
             similarity_matrix = get_similarity_matrix()
             if similarity_matrix is None:
                 st.error("Similarity matrix not found or could not be loaded.")
-                st.warning("Please ensure you've pre-computed the similarity matrix.")
+                st.info("Please ensure you've run the precomputation script and uploaded the 'similarity.pbz2' file.")
                 st.stop()
             
             # Store in session state
