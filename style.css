@@ -24,10 +24,10 @@
 }
 
 #content {
-	background-image: url("image_c5e9bd.jpg"); /* Updated to use your image */
-	background-size: cover; /* Added to make the image cover the entire element */
-	background-repeat: no-repeat; /* Added to prevent image repetition */
-	background-position: center center; /* Added to center the image */
+	background-image: url("image.jpg"); /* Updated to use "image.jpg" */
+	background-size: cover;
+	background-repeat: no-repeat;
+	background-position: center center;
 	background-color: #181818;
 	font-family: 'Noto Sans JP', sans-serif;
 }
@@ -254,5 +254,6 @@ h6 {
 	display: none;
 	color: white;
 }
+
 
 
