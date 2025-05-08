@@ -85,10 +85,8 @@ def get_similarity():
     if isinstance(recs, str):
         return jsonify({"error": recs})  # Return the error message from rcmd
     return jsonify({"recommendations": recs})
-
 @app.route("/recommend", methods=["POST"])
 def recommend():
-    """Renders the recommendation page with movie details."""
     try:
         details = {key: request.form[key] for key in request.form}
         suggestions = get_suggestions()
@@ -96,38 +94,35 @@ def recommend():
         for k in ['rec_movies', 'rec_posters', 'cast_names', 'cast_chars', 'cast_profiles', 'cast_bdays', 'cast_bios', 'cast_places']:
             if k in details:
                 details[k] = details[k].split('","')
-                details[k][0] = details[k][0].replace('["', '')  #corrected this
-                details[k][-1] = details[k][-1].replace('"]', '') #corrected this
+                details[k][0] = details[k][0].replace('["', '')  # corrected this
+                details[k][-1] = details[k][-1].replace('"]', '') # corrected this
 
-        cast_ids = details['cast_ids'].strip('[]').split(',') #corrected this
+        cast_ids = details['cast_ids'].strip('[]').split(',') # corrected this
         movie_cards = {details['rec_posters'][i]: details['rec_movies'][i] for i in range(len(details['rec_movies']))}
         casts = {details['cast_names'][i]: [cast_ids[i], details['cast_chars'][i], details['cast_profiles'][i]] for i in range(len(details['cast_names']))}
         cast_details = {details['cast_names'][i]: [cast_ids[i], details['cast_profiles'][i], details['cast_bdays'][i], details['cast_places'][i], details['cast_bios'][i]] for i in range(len(details['cast_names']))}
         movie_reviews = {}
         # skipping IMDB scraping in this simplified version
 
-        movie_reviews = {}
-# skipping IMDB scraping in this simplified version
-return render_template('recommend.html',
-                       title=details['title'],
-                       poster=details['poster'],
-                       overview=details['overview'],
-                       vote_average=details['rating'],
-                       vote_count=details['vote_count'],
-                       release_date=details['release_date'],
-                       runtime=details['runtime'],
-                       status=details['status'],
-                       genres=details['genres'],
-                       movie_cards=movie_cards,
-                       reviews=movie_reviews,
-                       casts=casts,
-                       cast_details=cast_details,
-                       suggestions=suggestions) # No comma after the last argument
-
-    except Exception as e:
+        return render_template('recommend.html',
+                               title=details['title'],
+                               poster=details['poster'],
+                               overview=details['overview'],
+                               vote_average=details['rating'],
+                               vote_count=details['vote_count'],
+                               release_date=details['release_date'],
+                               runtime=details['runtime'],
+                               status=details['status'],
+                               genres=details['genres'],
+                               movie_cards=movie_cards,
+                               reviews=movie_reviews,
+                               casts=casts,
+                               cast_details=cast_details,
+                               suggestions=suggestions)
+    except Exception as e: # added this
         logging.error(f"Error in /recommend: {e}")
         return f"Error in /recommend: {e}", 500
-
+        
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 10000))
     app.run(host='0.0.0.0', port=port)
