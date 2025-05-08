@@ -1,106 +1,78 @@
-import numpy as np
+import streamlit as st
 import pandas as pd
-from flask import Flask, render_template, request, jsonify
+import numpy as np
+import pickle
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
-import pickle
-import os
 
-
-app = Flask(__name__, template_folder='templates')
+# Set Streamlit page configuration
+st.set_page_config(page_title="Movie Recommender", layout="wide")
 
 # Load ML model and vectorizer
-try:
-    clf = pickle.load(open('nlp_model.pkl', 'rb'))
-    vectorizer = pickle.load(open('transform.pkl','rb'))
-except Exception as e:
-    print(f"Model loading error: {e}")
-    clf, vectorizer = None, None
-
-# Load data and compute similarity only ONCE
-try:
-    data = pd.read_csv('main_data.csv')
-    cv = CountVectorizer()
-    count_matrix = cv.fit_transform(data['comb'])
-    similarity = cosine_similarity(count_matrix)
-
-
-except Exception as e:
-    print(f"Error loading main_data.csv or computing similarity: {e}")
-    data, similarity = None, None
-
-def get_suggestions():
+@st.cache_resource
+def load_model():
     try:
-        return list(data['movie_title'].str.capitalize())
-    except:
-        return []
+        clf = pickle.load(open('nlp_model.pkl', 'rb'))
+        vectorizer = pickle.load(open('transform.pkl','rb'))
+        return clf, vectorizer
+    except Exception as e:
+        st.error(f"Model loading error: {e}")
+        return None, None
 
-def rcmd(movie):
+# Load data and compute similarity
+@st.cache_data
+def load_data():
+    try:
+        data = pd.read_csv('main_data.csv')
+        cv = CountVectorizer()
+        count_matrix = cv.fit_transform(data['comb'])
+        similarity = cosine_similarity(count_matrix)
+        return data, similarity
+    except Exception as e:
+        st.error(f"Data loading error: {e}")
+        return None, None
+
+clf, vectorizer = load_model()
+data, similarity = load_data()
+
+# Function to return recommendations
+def get_recommendations(movie):
     movie = movie.lower()
     if movie not in data['movie_title'].str.lower().values:
-        return 'Sorry! Try another movie name.'
-    i = data.loc[data['movie_title'].str.lower() == movie].index[0]
-    lst = sorted(list(enumerate(similarity[i])), key=lambda x: x[1], reverse=True)[1:11]
-    return [data['movie_title'][i[0]] for i in lst]
+        return "Sorry! Movie not found."
+    idx = data[data['movie_title'].str.lower() == movie].index[0]
+    scores = list(enumerate(similarity[idx]))
+    sorted_scores = sorted(scores, key=lambda x: x[1], reverse=True)[1:11]
+    recommended_movies = [data['movie_title'][i[0]] for i in sorted_scores]
+    return recommended_movies
 
-@app.route('/', methods=['GET', 'HEAD'])
-@app.route('/home', methods=['GET', 'HEAD'])
-def home():
-    try:
-        suggestions = get_suggestions()
-        return render_template('home.html', suggestions=suggestions)
-    except Exception as e:
-        return f"Error rendering home.html: {e}", 500
+# UI Design
+st.title("🎬 Movie Recommender System")
 
-@app.route("/similarity", methods=["POST"])
-def get_similarity():
-    movie = request.form.get('name')
-    if not movie:
-        return jsonify({"error": "No movie name provided."})
-    recs = rcmd(movie)
-    if isinstance(recs, str):
-        return jsonify({"error": recs})
-    return jsonify({"recommendations": recs})
+with st.expander("📚 How it works"):
+    st.write("This system recommends movies based on content similarity using NLP and cosine similarity on textual data like genre, director, cast, etc.")
 
-@app.route("/recommend", methods=["POST"])
-def recommend():
-    try:
-        details = {key: request.form[key] for key in request.form}
-        suggestions = get_suggestions()
-        for k in ['rec_movies', 'rec_posters', 'cast_names', 'cast_chars', 'cast_profiles', 'cast_bdays', 'cast_bios', 'cast_places']:
-            if k in details:
-                details[k] = details[k].split('","')
-                details[k][0] = details[k][0].replace('["', '')
-                details[k][-1] = details[k][-1].replace('"]', '')
-        cast_ids = details['cast_ids'].strip('[]').split(',')
-        movie_cards = {details['rec_posters'][i]: details['rec_movies'][i] for i in range(len(details['rec_movies']))}
-        casts = {details['cast_names'][i]: [cast_ids[i], details['cast_chars'][i], details['cast_profiles'][i]] for i in range(len(details['cast_names']))}
-        cast_details = {details['cast_names'][i]: [cast_ids[i], details['cast_profiles'][i], details['cast_bdays'][i], details['cast_places'][i], details['cast_bios'][i]] for i in range(len(details['cast_names']))}
+# Movie input
+movie_input = st.text_input("Enter a movie name:", placeholder="e.g., Inception")
 
-        movie_reviews = {}
-        # skipping IMDB scraping in this simplified version
-        return render_template('recommend.html',
-                               title=details['title'],
-                               poster=details['poster'],
-                               overview=details['overview'],
-                               vote_average=details['rating'],
-                               vote_count=details['vote_count'],
-                               release_date=details['release_date'],
-                               runtime=details['runtime'],
-                               status=details['status'],
-                               genres=details['genres'],
-                               movie_cards=movie_cards,
-                               reviews=movie_reviews,
-                               casts=casts,
-                               cast_details=cast_details,
-                               suggestions=suggestions)
-    except Exception as e:
-        return f"Error in /recommend: {e}", 500
+if st.button("🔍 Get Recommendations"):
+    if not movie_input.strip():
+        st.warning("Please enter a movie name.")
+    else:
+        results = get_recommendations(movie_input)
+        if isinstance(results, str):
+            st.error(results)
+        else:
+            st.subheader("✨ Recommended Movies:")
+            for i, title in enumerate(results, 1):
+                st.write(f"{i}. {title}")
 
-if __name__ == '__main__':
-    port = int(os.environ.get("PORT", 10000))
-    app.run(host='0.0.0.0', port=port)
+# Optional: Suggest movie names
+with st.expander("📖 View all available movie titles"):
+    st.markdown("Here are a few sample titles you can try:")
+    if data is not None:
+        sample_titles = list(data['movie_title'].sample(20).values)
+        st.write(", ".join(sample_titles))
 
-    
 
 
