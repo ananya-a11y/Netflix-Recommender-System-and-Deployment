@@ -112,23 +112,34 @@ def recommend():
         cast_details = {details['cast_names'][i]: [cast_ids[i], details['cast_profiles'][i], details['cast_bdays'][i], details['cast_places'][i], details['cast_bios'][i]] for i in range(len(details['cast_names']))}
         movie_reviews = {}
         return render_template('recommend.html',
-                               title=details['title'],
-                               poster=details['poster'],
-                               overview=details['overview'],
-                               vote_average=details['rating'],
-                               vote_count=details['vote_count'],
-                               release_date=details['release_date'],
-                               runtime=details['runtime'],
-                               status=details['status'],
-                               genres=details['genres'],
-                               movie_cards=movie_cards,
-                               reviews=movie_reviews,
-                               casts=casts,
-                               cast_details=cast_details,
-                               suggestions=suggestions)
+                                        title=details['title'],
+                                        poster=details['poster'],
+                                        overview=details['overview'],
+                                        vote_average=details['rating'],
+                                        vote_count=details['vote_count'],
+                                        release_date=details['release_date'],
+                                        runtime=details['runtime'],
+                                        status=details['status'],
+                                        genres=details['genres'],
+                                        movie_cards=movie_cards,
+                                        reviews=movie_reviews,
+                                        casts=casts,
+                                        cast_details=cast_details,
+                                        suggestions=suggestions)
     except Exception as e:
         logging.error(f"Error in /recommend: {e}")
         return f"Error in /recommend: {e}", 500
+
+#  Add this route to provide movie titles for autocomplete
+@app.route('/api/movies')
+def get_movies():
+    try:
+        df = pd.read_csv("data1.csv")  # Or "new_data.csv", depending on which file you want to use
+        movie_titles = df['movie_title'].tolist()
+        return jsonify({"movies": movie_titles})
+    except Exception as e:
+        print(f"Error reading CSV: {e}")  # Log the error
+        return jsonify({"error": "Failed to load movie data"}), 500
 
 # Preload data for Render
 load_data(reduce_data=True, num_samples=3000)
