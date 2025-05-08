@@ -40,7 +40,7 @@ def rcmd(movie):
     if movie not in data['movie_title'].str.lower().values:
         return 'Sorry! Try another movie name.'
     i = data.loc[data['movie_title'].str.lower() == movie].index[0]
-    lst = sorted(list(enumerate(similarity_matrix[i])), key=lambda x: x[1], reverse=True)[1:11]
+    lst = sorted(list(enumerate(similarity[i])), key=lambda x: x[1], reverse=True)[1:11]
     return [data['movie_title'][i[0]] for i in lst]
 
 @app.route('/', methods=['GET', 'HEAD'])
