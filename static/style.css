@@ -22,9 +22,8 @@
 	margin-right: auto;
 	color: #e4e0e0;
 }
-
 #content {
-	background-image: url("../static/image.jpg");
+	background-image: url('image.jpg');
 	background-color: #181818;
 	font-family: 'Noto Sans JP', sans-serif;
 }
