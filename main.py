@@ -46,7 +46,7 @@ def load_data(reduce_data=False, num_samples=3000):
 
                 else:
                     logging.warning(f"Data already <= {num_samples}, no reduction needed.")
-            suggestions_list = list(data['title'].str.capitalize())
+            suggestions_list = list(data['movie_title'].str.capitalize()) # changed this line
             logging.info("Data loaded successfully.")
         except Exception as e:
             logging.error(f"Error loading data: {e}")
@@ -70,15 +70,15 @@ def rcmd(movie):
         return "Error: Data or model is not available."
 
     movie = movie.lower()
-    if movie not in data['title'].str.lower().values:
+    if movie not in data['movie_title'].str.lower().values: # changed this line
         return 'Sorry! Try another movie name.'
     try:
-        movie_index = data.loc[data['title'].str.lower() == movie].index[0]
+        movie_index = data.loc[data['movie_title'].str.lower() == movie].index[0] # changed this line
         movie_comb = data['comb'].iloc[movie_index]
         movie_vector = vectorizer.transform([movie_comb])
         similarity_scores = cosine_similarity(movie_vector, vectorizer.transform(data['comb']))[0]
         similar_movies = sorted(list(enumerate(similarity_scores)), key=lambda x: x[1], reverse=True)[1:11]
-        return [data['title'][i[0]] for i in similar_movies]
+        return [data['movie_title'][i[0]] for i in similar_movies] # changed this line
     except Exception as e:
         logging.error(f"Error calculating similarity: {e}")
         return "Error calculating movie recommendations."
@@ -154,6 +154,7 @@ if __name__ == '__main__':
     # Load data with reduction enabled.  You can change num_samples here.
     load_data(reduce_data=True, num_samples=3000)
     app.run(host='0.0.0.0', port=port)
+
 
 
 
