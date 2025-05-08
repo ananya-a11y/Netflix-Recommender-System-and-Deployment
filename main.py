@@ -1,8 +1,8 @@
 import numpy as np
 import pandas as pd
-from flask import Flask, render\_template, request, jsonify
-from sklearn.feature\_extraction.text import CountVectorizer
-from sklearn.metrics.pairwise import cosine\_similarity
+from flask import Flask, render_template, request, jsonify
+from sklearn.feature_extraction.text import CountVectorizer
+from sklearn.metrics.pairwise import cosine_similarity
 import pickle
 import os
 
