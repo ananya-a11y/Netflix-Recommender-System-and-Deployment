@@ -7,7 +7,7 @@ import pickle
 import os
 import logging
 
-app = Flask(__name__, template_folder='templates')
+app = Flask(__name__, template_folder='.')  
 
 # Global variables
 clf = None
