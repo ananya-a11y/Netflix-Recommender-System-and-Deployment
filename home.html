@@ -1,75 +1,359 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>Netflix Recommender System</title>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-
-  <!-- Google Fonts -->
-  <link href="https://fonts.googleapis.com/css?family=IBM+Plex+Sans&display=swap" rel="stylesheet">
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP&display=swap" rel="stylesheet">
-
-  <!-- Font Awesome -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
-
-  <!-- Bootstrap -->
-  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
-
-  <!-- Auto Complete -->
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tarekraafat/autocomplete.js@7.2.0/dist/css/autoComplete.min.css">
-  <link rel= "stylesheet" type= "text/css" href= "{{ url_for('static',filename='style.css') }}">
-  <script type="text/javascript">
-    var films = {{suggestions|tojson}};
-  </script>
-
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Movie Recommendation System</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Netflix+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Noto Sans JP', sans-serif;
+        }
+        .netflix-sans {
+            font-family: 'Netflix Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+        }
+    </style>
 </head>
+<body class="bg-gray-900 text-white">
+    <header class="bg-gray-800 py-4 shadow-md">
+        <div class="container mx-auto px-4">
+            <h1 class="text-3xl font-bold text-red-600 text-center netflix-sans">Movie Recommendation System</h1>
+        </div>
+    </header>
 
-<body id="content" style="font-family: 'Noto Sans JP', sans-serif;">
+    <main class="container mx-auto px-4 py-8">
+        <div class="flex justify-center mb-6">
+            <input
+                type="text"
+                id="autoComplete"
+                class="w-full md:w-auto px-4 py-2 rounded-md bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-red-500"
+                placeholder="Enter movie name..."
+            />
+            <button class="movie-button bg-red-600 hover:bg-red-700 text-white rounded-md px-6 py-2 ml-2 focus:outline-none focus:ring-2 focus:ring-red-500" disabled title="Search for movies">Search</button>
+        </div>
 
-	<div class="ml-container" style="display: block;">
-		<a href="https://github.com/ananya-a11y/Netflix-Recommender-System-and-Deployment" target="_blank" class="github-corner" title="View source on GitHub">
-		      <svg data-toggle="tooltip"
-		      data-placement="left" width="80" height="80" viewBox="0 0 250 250"
-			style="fill:#e50914; color:#fff; position: fixed;z-index:100; top: 0; border: 0; right: 0;" aria-hidden="true">
-			<path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path>
-			<path
-			  d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2"
-			  fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path>
-			<path
-			  d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z"
-			  fill="currentColor" class="octo-body"></path>
-		      </svg>
-		    </a>
-    <center><h1 style=""> Netflix Recommender System</h1></center>
-    <div class="form-group shadow-textarea" style="margin-top: 30px;text-align: center;color: white;">
-        <input type="text" name="movie" class="movie form-control" id="autoComplete" autocomplete="off" placeholder="Enter the Movie Name/title" style="background-color: #ffffff;border-color:#ffffff;width: 60%;color: #181818" required="required" />
-        <br>
-    </div>
+        <div id="loader" class="hidden">
+            <div class="loader-text">Loading...</div>
+        </div>
 
-    <div class="form-group" style="text-align: center;">
-      <button class="btn btn-primary btn-block movie-button" style="background-color: #e50914;text-align: center;border-color: #e50914;width:120px;" >Search</button><br><br>
-    </div>
-	</div>
+        <div id="fail" class="text-center text-red-500 text-lg mt-4" style="display: none;">
+            No results found. Please check the movie name.
+        </div>
 
-  <div id="loader" class="text-center">
-  </div>
-  
-  <div class="fail">
-    <center><h3>Sorry! try another movie name/title </h3></center>
-  </div>
+        <div class="results mt-8" style="display: none;">
+            </div>
+    </main>
 
-	<div class="results">
-    <center>
-      <h2 id="name" class="text-uppercase"></h2>
-    </center>
-	</div>
-	
+    <footer class="bg-gray-800 text-gray-300 py-4 text-center">
+        <div class="container mx-auto px-4">
+        </div>
+    </footer>
 
-	<script src="https://cdn.jsdelivr.net/npm/@tarekraafat/autocomplete.js@7.2.0/dist/js/autoComplete.min.js"></script>
-  <script type="text/javascript" src="{{url_for('static', filename='autocomplete.js')}}"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tarekraafat/autocomplete.js@10.2.6/dist/js/autoComplete.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        $(function() {
+            // Button will be disabled until we type anything inside the input field
+            const source = document.getElementById('autoComplete');
+            const inputHandler = function(e) {
+                if (e.target.value == "") {
+                    $('.movie-button').attr('disabled', true);
+                } else {
+                    $('.movie-button').attr('disabled', false);
+                }
+            }
+            source.addEventListener('input', inputHandler);
 
-  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
-  <script type="text/javascript" src="{{url_for('static', filename='recommend.js')}}"></script>
+            $('.movie-button').on('click', function() {
+                var my_api_key = '7fee067b60fd14ed0bd0013b0863045f';
+                var title = $('.movie').val();
+                if (title == "") {
+                    $('.results').css('display', 'none');
+                    $('.fail').css('display', 'block');
+                } else {
+                    load_details(my_api_key, title);
+                }
+            });
+        });
 
+        // will be invoked when clicking on the recommended movies
+        function recommendcard(e) {
+            var my_api_key = '7fee067b60fd14ed0bd0013b0863045f';
+            var title = e.getAttribute('title');
+            load_details(my_api_key, title);
+        }
+
+        // get the basic details of the movie from the API (based on the name of the movie)
+        function load_details(my_api_key, title) {
+            $.ajax({
+                type: 'GET',
+                url: 'https://api.themoviedb.org/3/search/movie?api_key=' + my_api_key + '&query=' + title,
+
+                success: function(movie) {
+                    if (movie.results.length < 1) {
+                        $('.fail').css('display', 'block');
+                        $('.results').css('display', 'none');
+                        $("#loader").delay(500).fadeOut();
+                    } else {
+                        $("#loader").fadeIn();
+                        $('.fail').css('display', 'none');
+                        $('.results').delay(1000).css('display', 'block');
+                        var movie_id = movie.results[0].id;
+                        var movie_title = movie.results[0].original_title;
+                        movie_recs(movie_title, movie_id, my_api_key);
+                    }
+                },
+                error: function() {
+                    alert('Invalid Request');
+                    $("#loader").delay(500).fadeOut();
+                },
+            });
+        }
+
+        // passing the movie name to get the similar movies from python's flask
+        function movie_recs(movie_title, movie_id, my_api_key) {
+            $.ajax({
+                type: 'POST',
+                url: "/similarity",
+                data: {
+                    'name': movie_title
+                },
+                success: function(recs) {
+                    if (recs.error) {
+                        $('.fail').css('display', 'block');
+                        $('.results').css('display', 'none');
+                        $("#loader").delay(500).fadeOut();
+                    } else {
+                        $('.fail').css('display', 'none');
+                        $('.results').css('display', 'block');
+
+                        var movie_arr = recs.recommendations;
+                        var arr = [];
+                        for (const movie of movie_arr) {
+                            arr.push(movie);
+                        }
+
+                        get_movie_details(movie_id, my_api_key, arr, movie_title);
+                    }
+                },
+                error: function() {
+                    alert("Something went wrong while getting recommendations.");
+                    $("#loader").delay(500).fadeOut();
+                }
+            });
+        }
+        // get all the details of the movie using the movie id.
+        function get_movie_details(movie_id, my_api_key, arr, movie_title) {
+            $.ajax({
+                type: 'GET',
+                url: 'https://api.themoviedb.org/3/movie/' + movie_id + '?api_key=' + my_api_key,
+                success: function(movie_details) {
+                    show_details(movie_details, arr, movie_title, my_api_key, movie_id);
+                },
+                error: function() {
+                    alert("API Error!");
+                    $("#loader").delay(500).fadeOut();
+                },
+            });
+        }
+
+        // passing all the details to python's flask for displaying and scraping the movie reviews using imdb id
+        function show_details(movie_details, arr, movie_title, my_api_key, movie_id) {
+            var imdb_id = movie_details.imdb_id;
+            var poster = 'https://image.tmdb.org/t/p/original' + movie_details.poster_path;
+            var overview = movie_details.overview;
+            var genres = movie_details.genres;
+            var rating = movie_details.vote_average;
+            var vote_count = movie_details.vote_count;
+            var release_date = new Date(movie_details.release_date);
+            var runtime = parseInt(movie_details.runtime);
+            var status = movie_details.status;
+            var genre_list = []
+            for (var genre in genres) {
+                genre_list.push(genres[genre].name);
+            }
+            var my_genre = genre_list.join(", ");
+            if (runtime % 60 == 0) {
+                runtime = Math.floor(runtime / 60) + " hour(s)"
+            } else {
+                runtime = Math.floor(runtime / 60) + " hour(s) " + (runtime % 60) + " min(s)"
+            }
+            arr_poster = get_movie_posters(arr, my_api_key);
+
+            movie_cast = get_movie_cast(movie_id, my_api_key);
+
+            ind_cast = get_individual_cast(movie_cast, my_api_key);
+
+            details = {
+                'title': movie_title,
+                'cast_ids': JSON.stringify(movie_cast.cast_ids),
+                'cast_names': JSON.stringify(movie_cast.cast_names),
+                'cast_chars': JSON.stringify(movie_cast.cast_chars),
+                'cast_profiles': JSON.stringify(movie_cast.cast_profiles),
+                'cast_bdays': JSON.stringify(ind_cast.cast_bdays),
+                'cast_bios': JSON.stringify(ind_cast.cast_bios),
+                'cast_places': JSON.stringify(ind_cast.cast_places),
+                'imdb_id': imdb_id,
+                'poster': poster,
+                'genres': my_genre,
+                'overview': overview,
+                'rating': rating,
+                'vote_count': vote_count.toLocaleString(),
+                'release_date': release_date.toDateString().split(' ').slice(1).join(' '),
+                'runtime': runtime,
+                'status': status,
+                'rec_movies': JSON.stringify(arr),
+                'rec_posters': JSON.stringify(arr_poster),
+            }
+
+            $.ajax({
+                type: 'POST',
+                data: details,
+                url: "/recommend",
+                dataType: 'html',
+                complete: function() {
+                    $("#loader").delay(500).fadeOut();
+                },
+                success: function(response) {
+                    $('.results').html(response);
+                    $('#autoComplete').val('');
+                    $(window).scrollTop(0);
+                }
+            });
+        }
+
+        // get the details of individual cast
+        function get_individual_cast(movie_cast, my_api_key) {
+            const cast_ids = movie_cast.cast_ids;
+            const cast_details_promises = cast_ids.map(cast_id => {
+                return $.ajax({
+                    type: 'GET',
+                    url: `https://api.themoviedb.org/3/person/${cast_id}?api_key=${my_api_key}`,
+                });
+            });
+
+            return Promise.all(cast_details_promises)
+                .then(cast_details_array => {
+                    const cast_bdays = cast_details_array.map(cast_detail => {
+                        return (new Date(cast_detail.birthday)).toDateString().split(' ').slice(1).join(' ');
+                    });
+                    const cast_bios = cast_details_array.map(cast_detail => cast_detail.biography);
+                    const cast_places = cast_details_array.map(cast_detail => cast_detail.place_of_birth);
+                    return {
+                        cast_bdays,
+                        cast_bios,
+                        cast_places
+                    };
+                })
+                .catch(error => {
+                    console.error("Error fetching cast details:", error);
+                    // Handle the error appropriately, e.g., display a user-friendly message
+                    return {
+                        cast_bdays: [],
+                        cast_bios: [],
+                        cast_places: []
+                    }; // Return empty arrays to prevent further errors
+                });
+        }
+
+        // getting the details of the cast for the requested movie
+        function get_movie_cast(movie_id, my_api_key) {
+            cast_ids = [];
+            cast_names = [];
+            cast_chars = [];
+            cast_profiles = [];
+
+            top_10 = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+            $.ajax({
+                type: 'GET',
+                url: "https://api.themoviedb.org/3/movie/" + movie_id + "/credits?api_key=" + my_api_key,
+                async: false,
+                success: function(my_movie) {
+                    if (my_movie.cast.length >= 10) {
+                        top_cast = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+                    } else {
+                        top_cast = [0, 1, 2, 3, 4];
+                    }
+                    for (var my_cast in top_cast) {
+                        cast_ids.push(my_movie.cast[my_cast].id)
+                        cast_names.push(my_movie.cast[my_cast].name);
+                        cast_chars.push(my_movie.cast[my_cast].character);
+                        cast_profiles.push("https://image.tmdb.org/t/p/original" + my_movie.cast[my_cast].profile_path);
+                    }
+                },
+                error: function() {
+                    alert("Invalid Request!");
+                    $("#loader").delay(500).fadeOut();
+                }
+            });
+
+            return {
+                cast_ids: cast_ids,
+                cast_names: cast_names,
+                cast_chars: cast_chars,
+                cast_profiles: cast_profiles
+            };
+        }
+
+        // getting posters for all the recommended movies
+        function get_movie_posters(arr, my_api_key) {
+            var arr_poster_list = []
+            for (var m in arr) {
+                $.ajax({
+                    type: 'GET',
+                    url: 'https://api.themoviedb.org/3/search/movie?api_key=' + my_api_key + '&query=' + arr[m],
+                    async: false,
+                    success: function(m_data) {
+                        arr_poster_list.push('https://image.tmdb.org/t/p/original' + m_data.results[0].poster_path);
+                    },
+                    error: function() {
+                        alert("Invalid Request!");
+                        $("#loader").delay(500).fadeOut();
+                    },
+                })
+            }
+            return arr_poster_list;
+        }
+
+        new autoComplete({
+            data: { // Data src [Array, Function, Async] | (REQUIRED)
+                src: films,
+            },
+            selector: "#autoComplete", // Input field selector | (Optional)
+            threshold: 2, // Min. Chars length to start Engine | (Optional)
+            debounce: 100, // Post duration for engine to start | (Optional)
+            searchEngine: "strict", // Search Engine type/mode | (Optional)
+            resultsList: { // Rendered results list object | (Optional)
+                render: true,
+                container: source => {
+                    source.setAttribute("id", "food_list");
+                },
+                destination: document.querySelector("#autoComplete"),
+                position: "afterend",
+                element: "ul"
+            },
+            maxResults: 5, // Max. number of rendered results | (Optional)
+            highlight: true, // Highlight matching results | (Optional)
+            resultItem: { // Rendered result item | (Optional)
+                content: (data, source) => {
+                    source.innerHTML = data.match;
+                },
+                element: "li"
+            },
+            noResults: () => { // Action script on noResults | (Optional)
+                const result = document.createElement("li");
+                result.setAttribute("class", "no_result");
+                result.setAttribute("tabindex", "1");
+                result.innerHTML = "No Results";
+                document.querySelector("#autoComplete_list").appendChild(result);
+            },
+            onSelection: feedback => { // Action script onSelection event | (Optional)
+                document.getElementById('autoComplete').value = feedback.selection.value;
+            }
+        });
+    </script>
 </body>
 </html>
+
