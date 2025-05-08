@@ -85,8 +85,10 @@ def get_similarity():
     if isinstance(recs, str):
         return jsonify({"error": recs})  # Return the error message from rcmd
     return jsonify({"recommendations": recs})
+
 @app.route("/recommend", methods=["POST"])
 def recommend():
+    """Renders the recommendation page with movie details."""
     try:
         details = {key: request.form[key] for key in request.form}
         suggestions = get_suggestions()
@@ -119,12 +121,11 @@ def recommend():
                                casts=casts,
                                cast_details=cast_details,
                                suggestions=suggestions)
-    except Exception as e: # added this
+    except Exception as e:
         logging.error(f"Error in /recommend: {e}")
         return f"Error in /recommend: {e}", 500
-        
+
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 10000))
     app.run(host='0.0.0.0', port=port)
-    ```
 
