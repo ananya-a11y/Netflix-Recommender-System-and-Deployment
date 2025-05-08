@@ -1,203 +1,105 @@
-import streamlit as st
-import pandas as pd
-import pickle
-import requests
-import bz2
-import os
-from pathlib import Path
 import numpy as np
+import pandas as pd
+from flask import Flask, render\_template, request, jsonify
+from sklearn.feature\_extraction.text import CountVectorizer
+from sklearn.metrics.pairwise import cosine\_similarity
+import pickle
+import os
 
-# Page config
-st.set_page_config(
-    page_title="Movie Recommender System",
-    page_icon="🎬",
-    layout="wide"
-)
+app = Flask(**name**, template\_folder='templates')
 
-# Custom CSS to improve appearance
-st.markdown("""
-<style>
-    .main-header {
-        font-size: 2.5rem;
-        color: #E50914;
-        text-align: center;
-        margin-bottom: 2rem;
-    }
-    
-    .movie-container {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        margin-bottom: 1rem;
-        padding: 1rem;
-        border-radius: 10px;
-        background-color: rgba(20, 20, 20, 0.8);
-    }
-    
-    .movie-title {
-        font-size: 1.2rem;
-        color: white;
-        margin-top: 0.5rem;
-    }
-    
-    .recommendation-text {
-        font-size: 1.8rem;
-        color: #E50914;
-        margin: 2rem 0 1rem 0;
-        text-align: center;
-    }
-</style>
-""", unsafe_allow_html=True)
+# Load ML model and vectorizer
 
-# Initialize session state variables if they don't exist
-if 'movie_list' not in st.session_state:
-    st.session_state['movie_list'] = []
-if 'similarity' not in st.session_state:
-    st.session_state['similarity'] = None
-if 'data_loaded' not in st.session_state:
-    st.session_state['data_loaded'] = False
+try:
+clf = pickle.load(open('nlp\_model.pkl', 'rb'))
+vectorizer = pickle.load(open('transform.pkl','rb'))
+except Exception as e:
+print(f"Model loading error: {e}")
+clf, vectorizer = None, None
 
-# Function to fetch movie poster - only if you have a movie ID that works with TMDB
-def fetch_poster(movie_id):
-    try:
-        url = f"https://api.themoviedb.org/3/movie/{movie_id}?api_key=b9bf452c3871ecb61c8761a66d155cc8&language=en-US"
-        data = requests.get(url).json()
-        poster_path = data.get('poster_path')
-        if poster_path:
-            return "https://image.tmdb.org/t/p/w500/" + poster_path
-        return None
-    except Exception as e:
-        # Just return None silently if poster fetch fails
-        return None
+# Load data and compute similarity only ONCE
 
-# Load data with proper error handling and caching
-@st.cache_data
-def load_movie_data():
-    try:
-        # If we previously saved an optimized version, load that instead
-        if os.path.exists('optimized_movies.pkl'):
-            with open('optimized_movies.pkl', 'rb') as f:
-                return pickle.load(f)
-        
-        # If optimized file doesn't exist, inform user
-        st.error("Movie data not found. Please run the precomputation script first.")
-        return None
-    except Exception as e:
-        st.error(f"Error loading movie data: {e}")
-        return None
+try:
+data = pd.read\_csv('main\_data.csv')
+cv = CountVectorizer()
+count\_matrix = cv.fit\_transform(data\['comb'])
+similarity = cosine\_similarity(count\_matrix)
 
-# Function to load or compute similarity matrix
-@st.cache_data
-def get_similarity_matrix():
-    try:
-        # Try to load pre-computed similarity matrix if it exists
-        if os.path.exists('similarity.pbz2'):
-            with bz2.BZ2File('similarity.pbz2', 'rb') as f:
-                return pickle.load(f)
-        
-        # If we have a non-compressed version, load that
-        if os.path.exists('similarity.pkl'):
-            with open('similarity.pkl', 'rb') as f:
-                return pickle.load(f)
-                
-        # If no similarity matrix exists, inform the user
-        st.error("Similarity matrix not found. Please run the precomputation script first.")
-        return None
-    except Exception as e:
-        st.error(f"Error loading similarity matrix: {e}")
-        return None
+except Exception as e:
+print(f"Error loading main\_data.csv or computing similarity: {e}")
+data, similarity = None, None
 
-# Recommendation function
-def recommend(movie_title, movies_df, similarity_matrix):
-    try:
-        if movie_title not in movies_df['title'].values:
-            return []
-        
-        movie_index = movies_df[movies_df['title'] == movie_title].index[0]
-        distances = similarity_matrix[movie_index]
-        movie_list = sorted(list(enumerate(distances)), reverse=True, key=lambda x: x[1])[1:6]
-        
-        recommended_movies = []
-        for i in movie_list:
-            movie_id = movies_df.iloc[i[0]]['movie_id'] if 'movie_id' in movies_df.columns else i[0]
-            movie_title = movies_df.iloc[i[0]]['title']
-            
-            # Try to get poster if possible
-            poster = None
-            try:
-                if isinstance(movie_id, (int, float, str)) and str(movie_id).isdigit():
-                    poster = fetch_poster(int(movie_id))
-            except:
-                poster = None
-                
-            recommended_movies.append({
-                'title': movie_title,
-                'poster': poster
-            })
-        return recommended_movies
-    except Exception as e:
-        st.error(f"Error generating recommendations: {e}")
-        return []
+def get\_suggestions():
+try:
+return list(data\['movie\_title'].str.capitalize())
+except:
+return \[]
 
-# Main function to run the Streamlit app
-def main():
-    st.markdown("<h1 class='main-header'>Movie Recommender System</h1>", unsafe_allow_html=True)
-    
-    # Show a spinner while loading data
-    with st.spinner("Loading movie data... This may take a moment."):
-        if not st.session_state['data_loaded']:
-            # Load movie data
-            movies_df = load_movie_data()
-            if movies_df is None:
-                st.error("Failed to load movie data. Please check that you've run the precomputation script and uploaded the files.")
-                st.info("Make sure 'optimized_movies.pkl' and 'similarity.pbz2' files exist in your repository.")
-                st.stop()
-            
-            # Load similarity matrix
-            similarity_matrix = get_similarity_matrix()
-            if similarity_matrix is None:
-                st.error("Similarity matrix not found or could not be loaded.")
-                st.info("Please ensure you've run the precomputation script and uploaded the 'similarity.pbz2' file.")
-                st.stop()
-            
-            # Store in session state
-            st.session_state['movie_list'] = sorted(movies_df['title'].tolist())
-            st.session_state['similarity'] = similarity_matrix
-            st.session_state['movies_df'] = movies_df
-            st.session_state['data_loaded'] = True
-    
-    # Create the selection box for movies
-    selected_movie = st.selectbox(
-        "Select or type a movie you like",
-        st.session_state['movie_list']
-    )
-    
-    # Create a button for getting recommendations
-    if st.button("Get Recommendations"):
-        with st.spinner("Finding movies you'll love..."):
-            recommendations = recommend(
-                selected_movie, 
-                st.session_state['movies_df'], 
-                st.session_state['similarity']
-            )
-            
-            if recommendations:
-                st.markdown("<h2 class='recommendation-text'>Recommended Movies</h2>", unsafe_allow_html=True)
-                
-                # Display recommendations in a grid
-                cols = st.columns(5)
-                for i, movie in enumerate(recommendations):
-                    with cols[i]:
-                        if movie['poster']:
-                            st.image(movie['poster'], width=150)
-                        else:
-                            st.image("https://via.placeholder.com/150x225?text=No+Poster", width=150)
-                        st.markdown(f"<p class='movie-title'>{movie['title']}</p>", unsafe_allow_html=True)
-            else:
-                st.warning("Could not generate recommendations. Please try another movie.")
+def rcmd(movie):
+movie = movie.lower()
+if movie not in data\['movie\_title'].str.lower().values:
+return 'Sorry! Try another movie name.'
+i = data.loc\[data\['movie\_title'].str.lower() == movie].index\[0]
+lst = sorted(list(enumerate(similarity\[i])), key=lambda x: x\[1], reverse=True)\[1:11]
+return \[data\['movie\_title']\[i\[0]] for i in lst]
 
-# Run the app
-if __name__ == '__main__':
-    main()
+@app.route('/', methods=\['GET', 'HEAD'])
+@app.route('/home', methods=\['GET', 'HEAD'])
+def home():
+try:
+suggestions = get\_suggestions()
+return render\_template('home.html', suggestions=suggestions)
+except Exception as e:
+return f"Error rendering home.html: {e}", 500
 
+@app.route("/similarity", methods=\["POST"])
+def get\_similarity():
+movie = request.form.get('name')
+if not movie:
+return jsonify({"error": "No movie name provided."})
+recs = rcmd(movie)
+if isinstance(recs, str):
+return jsonify({"error": recs})
+return jsonify({"recommendations": recs})
+
+@app.route("/recommend", methods=\["POST"])
+def recommend():
+try:
+details = {key: request.form\[key] for key in request.form}
+suggestions = get\_suggestions()
+for k in \['rec\_movies', 'rec\_posters', 'cast\_names', 'cast\_chars', 'cast\_profiles', 'cast\_bdays', 'cast\_bios', 'cast\_places']:
+if k in details:
+details\[k] = details\[k].split('","')
+details\[k]\[0] = details\[k]\[0].replace('\["', '')
+details\[k]\[-1] = details\[k]\[-1].replace('"]', '')
+cast\_ids = details\['cast\_ids'].strip('\[]').split(',')
+movie\_cards = {details\['rec\_posters']\[i]: details\['rec\_movies']\[i] for i in range(len(details\['rec\_movies']))}
+casts = {details\['cast\_names']\[i]: \[cast\_ids\[i], details\['cast\_chars']\[i], details\['cast\_profiles']\[i]] for i in range(len(details\['cast\_names']))}
+cast\_details = {details\['cast\_names']\[i]: \[cast\_ids\[i], details\['cast\_profiles']\[i], details\['cast\_bdays']\[i], details\['cast\_places']\[i], details\['cast\_bios']\[i]] for i in range(len(details\['cast\_names']))}
+
+```
+    movie_reviews = {}
+    # skipping IMDB scraping in this simplified version
+    return render_template('recommend.html',
+                           title=details['title'],
+                           poster=details['poster'],
+                           overview=details['overview'],
+                           vote_average=details['rating'],
+                           vote_count=details['vote_count'],
+                           release_date=details['release_date'],
+                           runtime=details['runtime'],
+                           status=details['status'],
+                           genres=details['genres'],
+                           movie_cards=movie_cards,
+                           reviews=movie_reviews,
+                           casts=casts,
+                           cast_details=cast_details,
+                           suggestions=suggestions)
+except Exception as e:
+    return f"Error in /recommend: {e}", 500
+```
+
+if **name** == '**main**':
+port = int(os.environ.get("PORT", 10000))
+app.run(host='0.0.0.0', port=port)
 
