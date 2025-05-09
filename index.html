@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Netflix Recommender System</title>
+    <link rel="stylesheet" href="static/style (2).css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Netflix+Sans&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.6/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@barba/barba"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vanilla-autocomplete@1.0.5/dist/autocomplete.min.js"></script>
+</head>
+<body id="content">
+
+    <div class="container-fluid">
+        <h1 class="text-center mb-4">Netflix Recommender System</h1>
+        <div class="search-container d-flex justify-content-center mb-3">
+            <div class="autocomplete-wrapper">
+                <input type="text" id="autoComplete" class="form-control" placeholder="Enter movie title..." autocomplete="off">
+            </div>
+            <button class="movie-button btn btn-danger ml-2" disabled>Search</button>
+        </div>
+
+        <div id="loader" class="d-flex justify-content-center align-items-center h-100" style="display: none;">
+            <span class="font-weight-bold" id="loader-text">Loading...</span>
+        </div>
+
+        <div class="fail text-center" style="display: none;">
+            <h2>Sorry, we couldn't find any results for that movie.</h2>
+        </div>
+
+        <div class="results">
+            </div>
+
+        <div id="error-message" class="alert alert-danger" style="display: none;"></div>
+
+        <div class="movie-grid">
+            <div class="movie-poster"></div>
+            <div class="movie-poster"></div>
+            <div class="movie-poster"></div>
+            <div class="movie-poster"></div>
+            <div class="movie-poster"></div>
+            <div class="movie-poster"></div>
+            <div class="movie-poster"></div>
+            <div class="movie-poster"></div>
+            </div>
+    </div>
+
+    <div class="footer mt-5 bg-dark text-light py-3 text-center">
+        <p>&copy; 2025 Movie Recs. All rights reserved.</p>
+    </div>
+
+    <script src="static/autocomplete.js"></script>
+    <script src="static/recommend (1).js"></script>
+    <script>
+        // The films variable should be declared here,
+        // it is used by autocomplete.js
+        // Replace with your movie title data source (e.g., an array).
+        const films = [
+            "The Shawshank Redemption",
+            "The Godfather",
+            "The Dark Knight",
+            "Pulp Fiction",
+            "Schindler's List",
+            "Altered Carbon",
+            "The Witcher",
+            "Night on Earth",
+            "Triple Frontier",
+            "Lost in Space",
+            "Love, Death & Robots",
+            // ... add more movie titles
+        ];
+    </script>
+</body>
+</html>
