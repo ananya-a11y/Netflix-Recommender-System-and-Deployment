@@ -1,58 +1,61 @@
-<input type="text" id="autoComplete" class="movie" placeholder="Enter movie name..." />
-<script>
-  $(function() {
-    let films = []; // Declare the films array
+$(function() {
+  let films = [];
 
-    $.ajax({
-      type: 'GET',
-      url: '/api/movies',
-      dataType: 'json',
-      success: function(response) {
-        films = response.movies; // Populate the films array with data from Flask
+  $.ajax({
+    type: 'GET',
+    url: '/api/movies',
+    dataType: 'json',
+    success: function(response) {
+      films = response.movies;
 
-        // Initialize autoComplete *inside* the success callback
-        new autoComplete({
-          data: {
-            src: films,
+      new autoComplete({
+        data: {
+          src: films,
+        },
+        selector: "#autoComplete",
+        threshold: 2,
+        debounce: 100,
+        searchEngine: "strict",
+        resultsList: {
+          render: true,
+          container: (source) => {
+            source.setAttribute("id", "movie_list");
           },
-          selector: "#autoComplete",
-          threshold: 2,
-          debounce: 100,
-          searchEngine: "strict",
-          resultsList: {
-            render: true,
-            container: (source) => {
-              source.setAttribute("id", "movie_list");
-            },
-            destination: document.querySelector("#autoComplete"),
-            position: "afterend",
-            element: "ul"
+          destination: document.querySelector("#autoComplete"),
+          position: "afterend",
+          element: "ul"
+        },
+        maxResults: 5,
+        highlight: true,
+        resultItem: {
+          content: (data, source) => {
+            source.innerHTML = data.match;
           },
-          maxResults: 5,
-          highlight: true,
-          resultItem: {
-            content: (data, source) => {
-              source.innerHTML = data.match;
-            },
-            element: "li"
-          },
-          noResults: () => {
-            const result = document.createElement("li");
-            result.setAttribute("class", "no_result");
-            result.setAttribute("tabindex", "1");
-            result.innerHTML = "No Results";
-            document.querySelector("#movie_list").appendChild(result);
-          },
-          onSelection: feedback => {
-            document.getElementById('autoComplete').value = feedback.selection.value;
-          }
-        });
-      },
-      error: function(xhr, status, error) {
-        console.error("Error fetching movies:", error);
-        // Display an error message to the user in the UI
-        $('#error-message').text("Failed to load movie titles. Please check your server connection.").show();
-      }
-    });
+          element: "li"
+        },
+        noResults: () => {
+          const result = document.createElement("li");
+          result.setAttribute("class", "no_result");
+          result.setAttribute("tabindex", "1");
+          result.innerHTML = "No Results";
+          document.querySelector("#movie_list").appendChild(result);
+        },
+        onSelection: feedback => {
+          document.getElementById('autoComplete').value = feedback.selection.value;
+          $('.movie-button').prop('disabled', false); // Enable button after selection
+        }
+      });
+    },
+    error: function() {
+      console.error("Error loading movie list.");
+    }
   });
-</script>
+
+  $('#autoComplete').on('input', function() {
+    if (this.value.trim() === '') {
+      $('.movie-button').attr('disabled', true);
+    } else {
+      $('.movie-button').attr('disabled', false);
+    }
+  });
+});
