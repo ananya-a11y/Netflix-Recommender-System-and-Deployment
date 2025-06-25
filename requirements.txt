@@ -13,4 +13,3 @@ urllib3
 requests
 pickleshare
 Jinja2
-streamlit
